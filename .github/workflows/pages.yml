@@ -26,7 +26,7 @@ jobs:
       - name: Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Зависимости
@@ -40,6 +40,10 @@ jobs:
 
       - name: Настройка Pages
         uses: actions/configure-pages@v5
+        with:
+          # токен воркфлоу имеет pages:write — включаем Pages сами,
+          # без ручного переключателя в настройках репозитория
+          enablement: true
 
       - name: Артефакт сайта
         uses: actions/upload-pages-artifact@v3
