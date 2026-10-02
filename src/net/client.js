@@ -64,6 +64,12 @@ export class NetClient {
       clearInterval(this._pingTimer);
       if (!this._closedByUser) {
         this._attempts++;
+        /* На статическом хостинге (GitHub Pages) сервера /ws нет вовсе —
+           не спамим переподключениями, а честно переходим в офлайн-режим. */
+        if (this._attempts > 5) {
+          this._setStatus(false, 'офлайн · одиночная игра');
+          return;
+        }
         const delay = Math.min(8000, 700 * this._attempts);
         this._setStatus(false, `переподключение ${this._attempts}…`);
         clearTimeout(this._reconnectTimer);
