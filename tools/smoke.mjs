@@ -39,7 +39,15 @@ globalThis.window = {
 };
 globalThis.addEventListener = () => {};
 globalThis.removeEventListener = () => {};
-globalThis.requestAnimationFrame = () => 0;
+/* rAF с очередью: тесты могут «прокачивать» кадры как браузер */
+const _rafQ = [];
+globalThis.requestAnimationFrame = (cb) => { _rafQ.push(cb); return _rafQ.length; };
+globalThis.__pumpRaf = (n = 1) => {
+  for (let i = 0; i < n; i++) {
+    const cbs = _rafQ.splice(0, _rafQ.length);
+    for (const cb of cbs) cb(performance.now());
+  }
+};
 globalThis.devicePixelRatio = 1;
 globalThis.innerWidth = 1280;
 globalThis.innerHeight = 720;
@@ -524,6 +532,17 @@ test('матч TDM: симуляция боя — боты воюют, счёт 
   assert.ok(maxScore > 0, `за 120 секунд никто никого не убил (счёт ${maxScore})`);
   const totalDeaths = [...g.actors.values()].reduce((s, a) => s + a.deaths, 0);
   assert.ok(totalDeaths > 0, 'нет смертей');
+  g.quit();
+});
+
+test('матч: игровой цикл сам крутится после старта (rAF), камера у игрока', () => {
+  const { g } = startMatch('tdm', { limit: 999, bots: 0 });
+  // как в браузере: кадры качаем через requestAnimationFrame, а не вручную
+  for (let i = 0; i < 120; i++) { g.lastFrame = performance.now() - 16.7; globalThis.__pumpRaf(); }
+  assert.ok(g.time > 1, `игровое время не идёт: ${g.time.toFixed(2)}`);
+  const eye = g.me.eyePos(new THREE.Vector3());
+  assert.ok(g.camera.position.distanceTo(eye) < 2,
+    `камера не у игрока: ${g.camera.position.distanceTo(eye).toFixed(1)} м от глаз`);
   g.quit();
 });
 

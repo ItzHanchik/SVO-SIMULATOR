@@ -255,7 +255,10 @@ export class Game {
     this.ui.hud.setMode(MODES[this.mode].name, this.mapCfg.name);
     this._waveTimer = 0;
     this._announceWave();
-    this.lastFrame = performance.now();
+    /* ВАЖНО: без этого цикл не крутится в браузере — boot() вызывал loop()
+       при running=false, цепочка rAF умирала, и после «начать бой» камера
+       оставалась в меню-орбите, а игрок «не появлялся». */
+    this._ensureLoop();
   }
 
   _addRemote(p) {
@@ -865,8 +868,16 @@ export class Game {
   }
 
   /* ================= ОБНОВЛЕНИЕ ================= */
+  /* (ре)старт цикла: вызывается из startMatch, когда матч готов */
+  _ensureLoop() {
+    if (this._loopActive) return;
+    this._loopActive = true;
+    this.lastFrame = performance.now();
+    requestAnimationFrame(() => this.loop());
+  }
+
   loop() {
-    if (!this.running) return;
+    if (!this.running) { this._loopActive = false; return; }
     requestAnimationFrame(() => this.loop());
     const now = performance.now();
     let dt = (now - this.lastFrame) / 1000;

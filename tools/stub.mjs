@@ -27,11 +27,19 @@ globalThis.document = {
 globalThis.window = {
   addEventListener() {}, removeEventListener() {},
   innerWidth: 1280, innerHeight: 720, devicePixelRatio: 1,
-  AudioContext: null, requestAnimationFrame: () => 0
+  AudioContext: null, requestAnimationFrame: (cb) => globalThis.requestAnimationFrame(cb)
 };
 globalThis.addEventListener = () => {};
 globalThis.removeEventListener = () => {};
-globalThis.requestAnimationFrame = () => 0;
+/* rAF с очередью: тесты могут «прокачивать» кадры как браузер */
+const _rafQ = [];
+globalThis.requestAnimationFrame = (cb) => { _rafQ.push(cb); return _rafQ.length; };
+globalThis.__pumpRaf = (n = 1) => {
+  for (let i = 0; i < n; i++) {
+    const cbs = _rafQ.splice(0, _rafQ.length);
+    for (const cb of cbs) cb(performance.now());
+  }
+};
 globalThis.devicePixelRatio = 1;
 globalThis.innerWidth = 1280;
 globalThis.innerHeight = 720;
