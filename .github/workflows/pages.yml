@@ -39,18 +39,17 @@ jobs:
         run: npm run build
 
       - name: Диагностика прав токена
+        continue-on-error: true
         run: |
-          echo "--- создание Pages-сайта ---"
-          curl -s -o /tmp/o -w "HTTP %{http_code}\n" -X POST \
+          CODE=$(curl -s -o /tmp/o -w "%{http_code}" -X POST \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github+json" \
             https://api.github.com/repos/${{ github.repository }}/pages \
-            -d '{"build_type":"workflow"}'
-          cat /tmp/o; echo
-          echo "--- права установленного токена ---"
-          curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            https://api.github.com/repos/${{ github.repository }} \
-            | grep -o '"permissions":{[^}]*}'; echo
+            -d '{"build_type":"workflow"}')
+          echo "::error::PAGES_POST=$CODE BODY=$(tr -d '\n' < /tmp/o | cut -c1-160)"
+          PERM=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/repos/${{ github.repository }} | grep -o '"permissions":{[^}]*}')
+          echo "::error::PERMS=$PERM"
 
       - name: Настройка Pages
         uses: actions/configure-pages@v5
