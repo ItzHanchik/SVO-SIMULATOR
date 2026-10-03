@@ -1705,6 +1705,10 @@ export class Game {
     Sfx.droneHum(false);
     const win = this.scores.vega === this.scores.argo ? 'draw'
       : (this.scores[this.me.faction] > this.scores[this.me.faction === 'vega' ? 'argo' : 'vega'] ? 'win' : 'lose');
+    /* без этого после «результаты → меню» оставались класс in-match
+       (гасит фон меню) и видимый HUD поверх интерфейса */
+    document.body.classList.remove('in-match');
+    this.ui.showHud(false);
     this.ui.showResults(win, this.scores, this._localStats, this.me);
   }
 

@@ -30,7 +30,15 @@ globalThis.document = {
   createElement: (t) => (t === 'canvas' ? fakeCanvas() : { style: {}, appendChild() {}, addEventListener() {} }),
   addEventListener() {}, removeEventListener() {},
   pointerLockElement: null, exitPointerLock: null, getElementById: () => null,
-  body: { classList: { add() {}, remove() {}, toggle() {} } }
+  body: (() => {
+    const cs = new Set();
+    return { classList: {
+      add: (c) => cs.add(c),
+      remove: (c) => cs.delete(c),
+      toggle: (c, on) => { if (on === undefined ? !cs.has(c) : on) cs.add(c); else cs.delete(c); },
+      contains: (c) => cs.has(c)
+    } };
+  })()
 };
 globalThis.window = {
   addEventListener() {}, removeEventListener() {},
@@ -572,6 +580,22 @@ test('матч: оружие видно в кадре и перезарядка 
   assert.equal(g.me.weapon.mag, g.me.weapon.def.mag, 'магазин не дозаправился');
   assert.ok(g.viewModel.rotation.x < 0.05, 'анимация не вернулась после перезарядки');
   g.quit();
+});
+
+test('матч: выход и завершение снимают in-match и скрывают HUD', () => {
+  const { g, ui } = startMatch('tdm', { limit: 999, bots: 0 });
+  assert.ok(document.body.classList.contains('in-match'), 'in-match не выставлен на старте');
+  assert.equal(ui.calls.hudShown, true);
+  g.quit();
+  assert.ok(!document.body.classList.contains('in-match'), 'после quit остался in-match');
+  assert.equal(ui.calls.hudShown, false, 'после quit HUD не скрыт');
+
+  const r = startMatch('tdm', { limit: 1, bots: 8 });
+  for (let i = 0; i < 60 * 180 && r.g.running; i++) { r.g.lastFrame = performance.now() - 16.7; r.g.loop(); }
+  assert.ok(r.g.matchOver, 'матч не завершился');
+  assert.ok(!document.body.classList.contains('in-match'), 'после endMatch остался in-match');
+  assert.equal(r.ui.calls.hudShown, false, 'после endMatch HUD не скрыт');
+  assert.ok(r.ui.calls.results, 'экран результатов не показан');
 });
 
 test('матч: победа по лимиту фрагов завершает бой', () => {

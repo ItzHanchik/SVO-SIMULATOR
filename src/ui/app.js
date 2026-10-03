@@ -634,6 +634,9 @@ export class App {
     this.inMatch = false;
     $('pause').classList.add('hidden');
     this._awardXp(true);
+    /* раньше после выхода не включался ни один экран — игрок оставался
+       на чёрной сцене без меню */
+    this.goto(Net.room ? 'lobby' : 'menu');
   }
 
   setScoreboard(on) {
