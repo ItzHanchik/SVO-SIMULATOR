@@ -546,6 +546,34 @@ test('матч: игровой цикл сам крутится после ст�
   g.quit();
 });
 
+test('матч: оружие видно в кадре и перезарядка анимируется', () => {
+  const { g } = startMatch('tdm', { limit: 999, bots: 0 });
+  for (let i = 0; i < 30; i++) { g.lastFrame = performance.now() - 16.7; globalThis.__pumpRaf(); }
+  assert.ok(g.viewModel, 'нет вью-модели оружия');
+  assert.ok(g.vmGroup.visible, 'вью-модель скрыта');
+  const p = g.vmGroup.position;
+  assert.ok([p.x, p.y, p.z].every(Number.isFinite), `vmGroup улетел в NaN: ${p.x}, ${p.y}, ${p.z}`);
+  const dist = g.vmGroup.position.distanceTo(new THREE.Vector3(0.22, -0.2, -0.42));
+  assert.ok(dist < 0.3, `вью-модель не на месте: ${dist.toFixed(2)}`);
+
+  // перезарядка: наклон ствола и выпадение магазина
+  g.me.weapon.mag = 5;
+  assert.ok(g.me.startReload(g.time), 'перезарядка не началась');
+  const mag = g.viewModel.userData.mag;
+  const magBase = mag.position.y;
+  let maxTilt = 0, maxDrop = 0;
+  for (let i = 0; i < 160; i++) {
+    g.lastFrame = performance.now() - 16.7; globalThis.__pumpRaf();
+    maxTilt = Math.max(maxTilt, g.viewModel.rotation.x);
+    maxDrop = Math.max(maxDrop, magBase - mag.position.y);
+  }
+  assert.ok(maxTilt > 0.2, `ствол не клюёт при перезарядке: ${maxTilt.toFixed(3)}`);
+  assert.ok(maxDrop > 0.05, `магазин не выпадает: ${maxDrop.toFixed(3)}`);
+  assert.equal(g.me.weapon.mag, g.me.weapon.def.mag, 'магазин не дозаправился');
+  assert.ok(g.viewModel.rotation.x < 0.05, 'анимация не вернулась после перезарядки');
+  g.quit();
+});
+
 test('матч: победа по лимиту фрагов завершает бой', () => {
   const { g, ui } = startMatch('tdm', { limit: 3, skill: 'normal', bots: 16 });
   for (let i = 0; i < 60 * 180 && g.running; i++) {

@@ -578,8 +578,11 @@ export class Game {
       return;
     }
 
-    if (now < me.reloadUntil) {
-      if (me.reloadUntil - now <= 0.001) me.finishReload();
+    /* перезарядка завершается, как только время вышло; старое условие ловило
+       окно в 1 мс между кадрами, и магазин «зависал» недозаряженным навсегда */
+    if (me.reloadUntil > 0 && now >= me.reloadUntil) {
+      me.finishReload();
+      me.reloadUntil = 0;
     }
     if (!this._primaryDown) return;
     const w = me.weapon;
@@ -1342,7 +1345,9 @@ export class Game {
     this._recoilOffset = Math.max(0, (this._recoilOffset || 0) - dt * 0.9);
     if (this._vmBase) {
       const ads = me.ads ? 1 : 0;
-      this._adsT = (this._adsT || 0) + (ads - this._adsT) * Math.min(1, dt * 14);
+      /* ВАЖНО: (ads - this._adsT) при undefined давал NaN с первого кадра —
+         вью-модель улетала в NaN и оружие пропадало из кадра */
+      this._adsT = (this._adsT || 0) + (ads - (this._adsT || 0)) * Math.min(1, dt * 14);
       const t = this._adsT;
       const targetX = THREE.MathUtils.lerp(0.22, 0.0, t);
       const targetY = THREE.MathUtils.lerp(-0.2, -0.083, t);
@@ -1353,9 +1358,26 @@ export class Game {
         targetZ + this._recoilOffset
       );
       if (this.viewModel) {
-        this.viewModel.rotation.x = this._recoilOffset * 0.9;
+        /* перезарядка: ствол клюёт вниз, магазин выпадает и возвращается */
+        let arc = 0;
+        const w = me.weapon;
+        if (w && me.reloadUntil > this.time && me.reloadUntil > (me.reloadStart || 0)) {
+          const pr = (this.time - me.reloadStart) / (me.reloadUntil - me.reloadStart);
+          arc = Math.sin(THREE.MathUtils.clamp(pr, 0, 1) * Math.PI);
+        }
+        this.viewModel.rotation.x = this._recoilOffset * 0.9 + arc * 0.5;
+        this.viewModel.position.y = -arc * 0.09;
         const sway = Math.sin(this._bob * 0.5) * 0.012 * (1 - t);
         this.viewModel.rotation.z = sway;
+        const mag = this.viewModel.userData.mag;
+        if (mag) {
+          if (mag.userData.baseY === undefined) {
+            mag.userData.baseY = mag.position.y;
+            mag.userData.baseRX = mag.rotation.x;
+          }
+          mag.position.y = mag.userData.baseY - arc * 0.17;
+          mag.rotation.x = mag.userData.baseRX + arc * 0.55;
+        }
       }
       this.camera.fov += (((this._baseFov || 82) + (me.ads ? -22 : 0)) - this.camera.fov) * Math.min(1, dt * 12);
       this.camera.updateProjectionMatrix();
