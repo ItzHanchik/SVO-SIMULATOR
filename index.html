@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>FRONTLINE: МЕРИДИАН — тактический шутер</title>
+<meta name="description" content="FRONTLINE: МЕРИДИАН — браузерный 3D тактический шутер: большая карта, арсенал, ФПВ-дроны, техника, боты, PvP-лобби и ранги." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Oswald:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b0f14'/%3E%3Cpath d='M16 4l10 6v12l-10 6-10-6V10z' fill='none' stroke='%23f0a93b' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%2338bdf8'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/src/ui/styles.css" />
+</head>
+<body>
+
+<!-- ============ BOOT / LOADING ============ -->
+<div id="boot" class="boot">
+  <div class="boot-inner">
+    <div class="boot-mark">
+      <svg viewBox="0 0 120 120" class="mark-svg">
+        <polygon points="60,8 108,36 108,84 60,112 12,84 12,36" fill="none" stroke="currentColor" stroke-width="2" opacity=".55"/>
+        <polygon points="60,24 94,44 94,76 60,96 26,76 26,44" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".35"/>
+        <circle cx="60" cy="60" r="9" fill="currentColor"/>
+        <path d="M60 60 L60 20" stroke="currentColor" stroke-width="2"/>
+      </svg>
+    </div>
+    <h1 class="boot-title">FRONTLINE</h1>
+    <div class="boot-sub">М Е Р И Д И А Н</div>
+    <div class="boot-bar"><div class="boot-bar-fill" id="bootFill"></div></div>
+    <div class="boot-log" id="bootLog">инициализация ядра…</div>
+  </div>
+  <div class="boot-scan"></div>
+</div>
+
+<!-- ============ 3D CANVAS ============ -->
+<canvas id="gl"></canvas>
+<div id="vignette"></div>
+<div id="dmgflash"></div>
+
+<!-- ============ MENU BACKGROUND OVERLAY ============ -->
+<div id="menuBackdrop">
+  <div class="grid-floor"></div>
+  <div class="haze"></div>
+</div>
+
+<!-- ============ MAIN MENU ============ -->
+<section id="screen-menu" class="screen">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 120 120"><polygon points="60,8 108,36 108,84 60,112 12,84 12,36" fill="none" stroke="currentColor" stroke-width="5"/><circle cx="60" cy="60" r="12" fill="currentColor"/><path d="M60 60V18" stroke="currentColor" stroke-width="6"/></svg>
+      </div>
+      <div class="brand-txt">
+        <div class="brand-a">FRONTLINE</div>
+        <div class="brand-b">МЕРИДИАН · сектор 7</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="net-pill" id="netPill"><span class="dot"></span><span id="netTxt">поиск узла…</span></div>
+      <div class="profile-chip" id="profileChip">
+        <div class="pc-rank" id="pcRankIcon"></div>
+        <div class="pc-mid">
+          <div class="pc-name" id="pcName">—</div>
+          <div class="pc-sub"><span id="pcRankName">—</span> · ур. <span id="pcLvl">1</span></div>
+        </div>
+        <div class="pc-bar"><i id="pcXpBar"></i></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="menu-body">
+    <div class="menu-left">
+      <div class="tag-line"><span class="tag-dot"></span> ОПЕРАЦИЯ «МЕРИДИАН» · фаза III</div>
+      <h2 class="hero-title">ДВА ФЛАГА.<br/><em>ОДНА ДОЛИНА.</em></h2>
+      <p class="hero-desc">
+        Вымышленный приграничный конфликт 2031 года в долине Меридиана.
+        Коалиция <b class="c-vega">VEGA</b> и альянс <b class="c-argo">ARGO</b> сходятся
+        за контроль над высотами, мостом и радиовышкой. Пехота, техника, ФПВ-дроны.
+      </p>
+
+      <div class="menu-actions">
+        <button class="btn btn-primary btn-lg" data-nav="quick">
+          <span class="btn-ico">▶</span>
+          <span class="btn-t">БЫСТРЫЙ БОЙ</span>
+          <span class="btn-s">автопоиск · игроки + боты</span>
+        </button>
+        <div class="btn-row">
+          <button class="btn btn-ghost" data-nav="create"><span class="btn-ico">＋</span>СОЗДАТЬ ЛОББИ</button>
+          <button class="btn btn-ghost" data-nav="join"><span class="btn-ico">⚯</span>ПО КОДУ</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" data-nav="arsenal"><span class="btn-ico">⛨</span>АРСЕНАЛ</button>
+          <button class="btn btn-ghost" data-nav="career"><span class="btn-ico">★</span>КАРЬЕРА</button>
+          <button class="btn btn-ghost" data-nav="settings"><span class="btn-ico">⚙</span>НАСТРОЙКИ</button>
+        </div>
+      </div>
+    </div>
+
+    <aside class="menu-right">
+      <div class="panel panel-faction">
+        <div class="panel-h">ВЫБОР СТОРОНЫ</div>
+        <div class="faction-cards">
+          <button class="fac-card is-vega active" data-fac="vega">
+            <div class="fac-insignia">
+              <svg viewBox="0 0 60 60"><path d="M30 6l20 12v24L30 54 10 42V18z" fill="none" stroke="currentColor" stroke-width="3"/><path d="M20 30h20M30 20v20" stroke="currentColor" stroke-width="3"/></svg>
+            </div>
+            <div class="fac-name">КОАЛИЦИЯ VEGA</div>
+            <div class="fac-role">Западный блок · мобильная пехота</div>
+            <ul class="fac-stats">
+              <li><span>Скорость</span><i style="--v:.86"><b></b></i></li>
+              <li><span>Броня</span><i style="--v:.70"><b></b></i></li>
+              <li><span>Дроны</span><i style="--v:.92"><b></b></i></li>
+            </ul>
+          </button>
+          <button class="fac-card is-argo" data-fac="argo">
+            <div class="fac-insignia">
+              <svg viewBox="0 0 60 60"><path d="M30 6l20 12v24L30 54 10 42V18z" fill="none" stroke="currentColor" stroke-width="3"/><path d="M18 42l12-26 12 26" fill="none" stroke="currentColor" stroke-width="3"/></svg>
+            </div>
+            <div class="fac-name">АЛЬЯНС ARGO</div>
+            <div class="fac-role">Восточный союз · тяжёлая техника</div>
+            <ul class="fac-stats">
+              <li><span>Скорость</span><i style="--v:.72"><b></b></i></li>
+              <li><span>Броня</span><i style="--v:.90"><b></b></i></li>
+              <li><span>Дроны</span><i style="--v:.78"><b></b></i></li>
+            </ul>
+          </button>
+        </div>
+      </div>
+
+      <div class="panel panel-modes">
+        <div class="panel-h">РЕЖИМ</div>
+        <div class="mode-list" id="modeList">
+          <button class="mode active" data-mode="tdm">
+            <div class="mode-ic">⚔</div>
+            <div class="mode-txt"><div class="mode-n">КОМАНДНЫЙ БОЙ</div><div class="mode-d">Игроки + боты · до 60 фрагов</div></div>
+          </button>
+          <button class="mode" data-mode="dom">
+            <div class="mode-ic">⚑</div>
+            <div class="mode-txt"><div class="mode-n">ДОМИНИРОВАНИЕ</div><div class="mode-d">3 контрольные точки · очки за удержание</div></div>
+          </button>
+          <button class="mode" data-mode="pve">
+            <div class="mode-ic">☠</div>
+            <div class="mode-txt"><div class="mode-n">ЗАЧИСТКА (PvE)</div><div class="mode-d">Вы против волн ботов-«мясников»</div></div>
+          </button>
+          <button class="mode" data-mode="pvp">
+            <div class="mode-ic">◎</div>
+            <div class="mode-txt"><div class="mode-n">ДУЭЛЬ (PvP)</div><div class="mode-d">Только живые игроки, без ботов</div></div>
+          </button>
+        </div>
+      </div>
+
+      <div class="panel panel-loadout-mini">
+        <div class="panel-h">ТЕКУЩИЙ КОМПЛЕКТ</div>
+        <div class="mini-loadout">
+          <div class="ml-weapon" id="mlPrimary"><div class="ml-ic">▮</div><div><div class="ml-n">—</div><div class="ml-d">основное</div></div></div>
+          <div class="ml-weapon" id="mlSecondary"><div class="ml-ic">▯</div><div><div class="ml-n">—</div><div class="ml-d">доп. ствол</div></div></div>
+          <div class="ml-gadgets" id="mlGadgets"></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="statusbar">
+    <span>WASD — движение</span><span>ЛКМ — огонь</span><span>ПКМ — прицел</span><span>R — перезарядка</span>
+    <span>G — ФПВ-дрон</span><span>E — техника</span><span>TAB — счёт</span><span>ESC — пауза</span>
+    <span class="sb-right">build <span id="buildTag">1.0.0</span></span>
+  </footer>
+</section>
+
+<!-- ============ ARSENAL ============ -->
+<section id="screen-arsenal" class="screen">
+  <header class="subtop">
+    <button class="btn btn-back" data-nav="menu">← НАЗАД</button>
+    <h2>АРСЕНАЛ</h2>
+    <div class="subtop-right">Кредиты: <b id="creditsVal">0</b></div>
+  </header>
+  <div class="arsenal-body">
+    <nav class="ars-tabs">
+      <button class="ars-tab active" data-tab="primary">ОСНОВНОЕ</button>
+      <button class="ars-tab" data-tab="secondary">ВТОРОЕ</button>
+      <button class="ars-tab" data-tab="gadget">СНАРЯЖЕНИЕ</button>
+      <button class="ars-tab" data-tab="vehicle">ТЕХНИКА</button>
+      <button class="ars-tab" data-tab="drone">ДРОНЫ</button>
+    </nav>
+    <div class="ars-grid" id="arsGrid"></div>
+    <aside class="ars-detail" id="arsDetail"></aside>
+  </div>
+</section>
+
+<!-- ============ CAREER / RANKS ============ -->
+<section id="screen-career" class="screen">
+  <header class="subtop">
+    <button class="btn btn-back" data-nav="menu">← НАЗАД</button>
+    <h2>КАРЬЕРА И РАНГИ</h2>
+    <div class="subtop-right">Всего боёв: <b id="careerMatches">0</b></div>
+  </header>
+  <div class="career-body">
+    <div class="career-card panel">
+      <div class="cc-rank" id="ccRankIcon"></div>
+      <div class="cc-txt">
+        <div class="cc-name" id="ccRankName">—</div>
+        <div class="cc-sub">Уровень <b id="ccLvl">1</b> · <span id="ccXpTxt">0 / 0 XP</span></div>
+        <div class="cc-bar"><i id="ccXpBar"></i><em id="ccXpPct">0%</em></div>
+        <div class="cc-next" id="ccNext">Следующий ранг: —</div>
+      </div>
+    </div>
+    <div class="career-stats" id="careerStats"></div>
+    <div class="rank-track" id="rankTrack"></div>
+  </div>
+</section>
+
+<!-- ============ LOBBY ============ -->
+<section id="screen-lobby" class="screen">
+  <header class="subtop">
+    <button class="btn btn-back" data-nav="menu">← НАЗАД</button>
+    <h2 id="lobbyTitle">ЛОББИ</h2>
+    <div class="subtop-right" id="lobbyCode"></div>
+  </header>
+  <div class="lobby-body">
+    <div class="lobby-main panel">
+      <div class="panel-h">СОСТАВ КОМАНД</div>
+      <div class="teams">
+        <div class="team team-vega">
+          <div class="team-h">КОАЛИЦИЯ VEGA <span id="teamVegaCount">0/8</span></div>
+          <ul class="team-list" id="listVega"></ul>
+          <button class="btn btn-mini" data-team="vega">ПЕРЕЙТИ</button>
+        </div>
+        <div class="team team-argo">
+          <div class="team-h">АЛЬЯНС ARGO <span id="teamArgoCount">0/8</span></div>
+          <ul class="team-list" id="listArgo"></ul>
+          <button class="btn btn-mini" data-team="argo">ПЕРЕЙТИ</button>
+        </div>
+      </div>
+      <div class="lobby-settings" id="lobbySettings">
+        <label>Режим
+          <select id="lsMode">
+            <option value="tdm">Командный бой</option>
+            <option value="dom">Доминирование</option>
+            <option value="pve">Зачистка (PvE)</option>
+            <option value="pvp">Дуэль (PvP)</option>
+          </select>
+        </label>
+        <label>Карта <select id="lsMap"><option value="meridian">Долина Меридиана</option><option value="ridge">Хребет Крон</option><option value="urban">Квартал Северный</option></select></label>
+        <label>Боты <select id="lsBots"><option value="0">0</option><option value="4">4</option><option value="8" selected>8</option><option value="12">12</option><option value="16">16</option></select></label>
+        <label>Сложность <select id="lsSkill"><option value="easy">Новобранцы</option><option value="normal" selected>Ветераны</option><option value="hard">Элита</option></select></label>
+        <label>Лимит <select id="lsLimit"><option value="40">40</option><option value="60" selected>60</option><option value="100">100</option></select></label>
+      </div>
+      <div class="lobby-actions">
+        <button class="btn btn-primary" id="btnReady">ГОТОВ</button>
+        <button class="btn btn-ghost" id="btnStart">НАЧАТЬ БОЙ</button>
+        <button class="btn btn-ghost btn-danger" id="btnLeave">ПОКИНУТЬ</button>
+      </div>
+    </div>
+    <aside class="lobby-side">
+      <div class="panel">
+        <div class="panel-h">КОД ПОДКЛЮЧЕНИЯ</div>
+        <div class="code-box" id="codeBox">—</div>
+        <div class="code-hint">Друзья вводят этот код в «ПО КОДУ»</div>
+        <button class="btn btn-mini btn-wide" id="btnCopyCode">СКОПИРОВАТЬ</button>
+      </div>
+      <div class="panel panel-chat">
+        <div class="panel-h">ЧАТ ЛОББИ</div>
+        <div class="chat-log" id="chatLog"></div>
+        <form id="chatForm"><input id="chatInput" maxlength="120" placeholder="сообщение…" autocomplete="off"/><button class="btn btn-mini">→</button></form>
+      </div>
+      <div class="panel">
+        <div class="panel-h">СВОБОДНЫЕ ЛОББИ</div>
+        <div class="room-list" id="roomList"></div>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- ============ SETTINGS ============ -->
+<section id="screen-settings" class="screen">
+  <header class="subtop">
+    <button class="btn btn-back" data-nav="menu">← НАЗАД</button>
+    <h2>НАСТРОЙКИ</h2>
+    <div class="subtop-right"></div>
+  </header>
+  <div class="settings-body panel" id="settingsBody"></div>
+</section>
+
+<!-- ============ JOIN BY CODE (modal) ============ -->
+<div class="modal" id="modalJoin">
+  <div class="modal-card">
+    <div class="modal-h">ПОДКЛЮЧЕНИЕ ПО КОДУ</div>
+    <input class="code-input" id="joinCodeInput" maxlength="6" placeholder="XXXXXX" autocomplete="off" spellcheck="false"/>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="btnJoinGo">ПОДКЛЮЧИТЬСЯ</button>
+      <button class="btn btn-ghost" data-close>ОТМЕНА</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modalName">
+  <div class="modal-card">
+    <div class="modal-h">ПОЗЫВНОЙ</div>
+    <input class="code-input" id="nameInput" maxlength="16" placeholder="ВАШ ПОЗЫВНОЙ" autocomplete="off"/>
+    <div class="modal-actions"><button class="btn btn-primary" id="btnNameOk">ПРИНЯТЬ</button></div>
+  </div>
+</div>
+
+<!-- ============ HUD ============ -->
+<div id="hud" class="hidden">
+  <div class="hud-top">
+    <div class="compass"><canvas id="compassCanvas" width="560" height="30"></canvas></div>
+    <div class="obj-banner" id="objBanner"><span class="ob-ico">⚑</span><span id="objText">ЗАХВАТИТЕ ТОЧКИ</span></div>
+    <div class="match-clock" id="matchClock">12:00</div>
+  </div>
+
+  <div class="score-strip" id="scoreStrip">
+    <div class="ss-team ss-vega"><span class="ss-tag">VEGA</span><b id="scoreVega">0</b></div>
+    <div class="ss-mid" id="ssMode">КОМАНДНЫЙ БОЙ</div>
+    <div class="ss-team ss-argo"><b id="scoreArgo">0</b><span class="ss-tag">ARGO</span></div>
+  </div>
+
+  <div class="hud-bottom-left">
+    <div class="vitals">
+      <div class="vit-row"><span class="vit-ico">✚</span><div class="bar bar-hp"><i id="hpFill"></i></div><span class="vit-num" id="hpNum">100</span></div>
+      <div class="vit-row"><span class="vit-ico">⛨</span><div class="bar bar-ar"><i id="arFill"></i></div><span class="vit-num" id="arNum">0</span></div>
+    </div>
+    <div class="stance" id="stanceTag">СТОЯ</div>
+  </div>
+
+  <div class="hud-bottom-right">
+    <div class="wpn">
+      <div class="wpn-name" id="wpnName">—</div>
+      <div class="wpn-ammo"><b id="ammoMag">30</b><span>/</span><span id="ammoRes">120</span></div>
+      <div class="wpn-mode" id="wpnMode">AUTO</div>
+    </div>
+    <div class="wpn-slots" id="wpnSlots"></div>
+  </div>
+
+  <div class="hud-map">
+    <canvas id="minimap" width="220" height="220"></canvas>
+    <div class="map-frame"></div>
+    <div class="map-label" id="mapLabel">ДОЛИНА МЕРИДИАНА</div>
+  </div>
+
+  <div class="killfeed" id="killfeed"></div>
+  <div class="hitmarker" id="hitmarker"></div>
+  <div class="crosshair" id="crosshair">
+    <div class="ch-t"></div><div class="ch-b"></div><div class="ch-l"></div><div class="ch-r"></div><div class="ch-dot"></div>
+  </div>
+  <div class="dmg-dir" id="dmgDir"></div>
+  <div class="interact-prompt" id="interactPrompt"></div>
+  <div class="drone-hud" id="droneHud">
+    <div class="dh-frame"></div>
+    <div class="dh-stats">
+      <div>БАТАРЕЯ <b id="drBat">100%</b></div>
+      <div>СИГНАЛ <b id="drSig">98%</b></div>
+      <div>БОЕЗАПАС <b id="drAmmo">1</b></div>
+      <div>ВЫСОТА <b id="drAlt">0м</b></div>
+    </div>
+    <div class="dh-rec">● REC</div>
+  </div>
+  <div class="vehicle-hud" id="vehicleHud">
+    <div class="vh-speed"><b id="vhSpeed">0</b><span>км/ч</span></div>
+    <div class="vh-hp"><div class="bar"><i id="vhHp"></i></div></div>
+    <div class="vh-name" id="vhName">—</div>
+  </div>
+  <div class="wave-banner" id="waveBanner"></div>
+  <div class="hint-toast" id="hintToast"></div>
+</div>
+
+<!-- ============ SCOREBOARD ============ -->
+<div id="scoreboard" class="hidden">
+  <div class="sb-wrap">
+    <div class="sb-head">
+      <div><span class="sb-mode" id="sbMode">КОМАНДНЫЙ БОЙ</span><span class="sb-map" id="sbMap">Долина Меридиана</span></div>
+      <div class="sb-clock" id="sbClock">12:00</div>
+    </div>
+    <div class="sb-cols">
+      <div class="sb-team sb-vega">
+        <div class="sb-th"><span>ИГРОК</span><span>У/С</span><span>ФРАГИ</span><span>ОЧКИ</span><span>ПИНГ</span></div>
+        <ul id="sbVega"></ul>
+      </div>
+      <div class="sb-team sb-argo">
+        <div class="sb-th"><span>ИГРОК</span><span>У/С</span><span>ФРАГИ</span><span>ОЧКИ</span><span>ПИНГ</span></div>
+        <ul id="sbArgo"></ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PAUSE ============ -->
+<div id="pause" class="hidden">
+  <div class="pause-card panel">
+    <div class="pause-h">ПАУЗА</div>
+    <button class="btn btn-primary btn-wide" id="btnResume">ПРОДОЛЖИТЬ</button>
+    <button class="btn btn-ghost btn-wide" data-nav="settings">НАСТРОЙКИ</button>
+    <button class="btn btn-ghost btn-wide btn-danger" id="btnQuit">ПОКИНУТЬ БОЙ</button>
+    <div class="pause-stats" id="pauseStats"></div>
+  </div>
+</div>
+
+<!-- ============ RESULTS ============ -->
+<div id="results" class="hidden">
+  <div class="res-card">
+    <div class="res-verdict" id="resVerdict">ПОБЕДА</div>
+    <div class="res-sub" id="resSub">VEGA 60 : 41 ARGO</div>
+    <div class="res-stats" id="resStats"></div>
+    <div class="res-xp">
+      <div class="rx-line"><span>Получено опыта</span><b id="rxGained">+0</b></div>
+      <div class="rx-bar"><i id="rxBar"></i></div>
+      <div class="rx-rank" id="rxRank"></div>
+    </div>
+    <button class="btn btn-primary btn-lg btn-wide" id="btnResMenu">В МЕНЮ</button>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

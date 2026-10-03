@@ -1,0 +1,12 @@
+# зависимости
+node_modules/
+
+# сборка
+dist/
+*.log
+
+# редакторы / ОС
+.DS_Store
+.idea/
+.vscode/
+*.swp
